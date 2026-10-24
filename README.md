@@ -22,7 +22,7 @@
 
 ## 🖥️ Demo
 
-![Expense Analyzer Demo]([[https://raw.githubusercontent.com/tirrex16/Expense-Analyzer/main/docs/demo.png](https://expense-analyzer-gamma.vercel.app/)](https://expense-analyzer-gamma.vercel.app/))
+![Expense Analyzer Demo]((https://expense-analyzer-gamma.vercel.app/)](https://expense-analyzer-gamma.vercel.app/))
 
 ---
 
