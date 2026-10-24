@@ -1,4 +1,4 @@
-# 💸 Expense Analyzer
+# 💸 AnalyzerSense
 
 > Pelacak & Analis Pengeluaran Pribadi berbasis teks — input bebas, kategorisasi otomatis, visualisasi instan.
 
@@ -22,9 +22,7 @@
 
 ## 🖥️ Demo
 
-![Expense Analyzer Demo](https://raw.githubusercontent.com/tirrex16/Expense-Analyzer/main/docs/demo.png)
-
-> Buka `public/index.html` langsung di browser, atau jalankan `node server.js`
+![Expense Analyzer Demo]([https://raw.githubusercontent.com/tirrex16/Expense-Analyzer/main/docs/demo.png](https://expense-analyzer-gamma.vercel.app/))
 
 ---
 
