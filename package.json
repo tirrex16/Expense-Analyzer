@@ -1,0 +1,14 @@
+{
+  "name": "expense-analyzer",
+  "version": "1.0.0",
+  "description": "Financial data extraction and categorization engine for Indonesian expenses.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "analyze": "node src/index.js",
+    "test": "node tests/test.js"
+  },
+  "keywords": ["expense", "finance", "IDR", "analyzer"],
+  "author": "Expense Analyzer",
+  "license": "MIT"
+}
