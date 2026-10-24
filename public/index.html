@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Expense Analyzer — Pelacak Pengeluaran Pribadi</title>
-  <meta name="description" content="Pelacak & analis pengeluaran pribadi berbasis input teks bebas. Kategorisasi otomatis, visualisasi instan." />
+  <title>Expense Analyzer — Personal Expense Tracker</title>
+  <meta name="description" content="Free-text personal expense tracker & analyzer. Automatic categorization, instant visualization, and budget tracking." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -592,7 +592,7 @@
     <div class="logo-mark"></div>
     <h1>Expense Analyzer</h1>
     <div class="header-actions">
-      <label class="btn btn-secondary btn-sm" title="Upload Excel yang sudah diunduh sebelumnya">
+      <label class="btn btn-secondary btn-sm" title="Upload previously downloaded Excel file">
         Upload Excel
         <input type="file" id="upload-excel-input" accept=".xlsx,.xls" style="display:none;">
       </label>
@@ -607,7 +607,7 @@
 <div class="tabs-nav">
   <button class="tab-btn active" data-tab="tab-input">Input</button>
   <button class="tab-btn" data-tab="tab-dashboard">Dashboard</button>
-  <button class="tab-btn" data-tab="tab-trend">Tren</button>
+  <button class="tab-btn" data-tab="tab-trend">Trends</button>
 </div>
 
 <main>
@@ -618,27 +618,27 @@
   <div id="tab-input" class="tab-panel active">
 
     <div class="card">
-      <div class="card-title">Tambah Pengeluaran</div>
+      <div class="card-title">Add Expenses</div>
 
       <div class="month-row">
-        <label for="month-input">Bulan</label>
+        <label for="month-input">Month</label>
         <input type="month" id="month-input" />
       </div>
 
       <div class="input-wrapper">
         <textarea id="expense-input"
-          placeholder="Contoh: makan siang 45ribu, bensin 60rb, bayar listrik 150.000, beli kopi 25k, ojek online 18500, langganan Netflix 54000, beli obat 32.500&#10;&#10;Pisahkan tiap item dengan koma (,) atau baris baru."
+          placeholder="Example: lunch 45k, gas 60k, electricity bill 150.000, coffee 25k, uber 18500, Netflix subscription 54000, medicine 32.500&#10;&#10;Separate each item with a comma (,) or a new line."
         ></textarea>
       </div>
       <div class="input-meta">
-        <span>Tekan <kbd>Ctrl+Enter</kbd> untuk analisis cepat</span>
-        <span id="char-count">0 karakter</span>
+        <span>Press <kbd>Ctrl+Enter</kbd> for quick analysis</span>
+        <span id="char-count">0 characters</span>
       </div>
 
       <div class="budget-field-row">
-        <label for="budget-total-input">Anggaran</label>
+        <label for="budget-total-input">Budget</label>
         <input type="text" id="budget-total-input"
-          placeholder="Total budget, cth: 2.000.000"
+          placeholder="Monthly budget, e.g. 2,000,000"
           inputmode="numeric" />
         <span class="budget-remaining hidden" id="budget-remaining"></span>
       </div>
@@ -646,18 +646,18 @@
       <div id="error-box" class="error-box hidden"></div>
 
       <div class="btn-row">
-        <button class="btn-primary" id="analyze-btn">Analisis &amp; Simpan</button>
-        <button class="btn-secondary" id="clear-btn" title="Kosongkan form input (tidak menghapus data tersimpan)">Kosongkan</button>
+        <button class="btn-primary" id="analyze-btn">Analyze &amp; Save</button>
+        <button class="btn-secondary" id="clear-btn" title="Clear form input (does not delete saved data)">Clear</button>
       </div>
     </div>
 
     <!-- Upload zone -->
     <div class="card">
-      <div class="card-title">Import dari Excel</div>
-      <p class="card-desc">Upload file Excel yang sebelumnya diunduh untuk melanjutkan atau menambah data.</p>
+      <div class="card-title">Import from Excel</div>
+      <p class="card-desc">Upload a previously downloaded Excel file to resume or merge data.</p>
       <label class="upload-area" for="upload-excel-drop">
         <input type="file" id="upload-excel-drop" accept=".xlsx,.xls">
-        <strong>Klik atau seret file ke sini</strong>
+        <strong>Click or drag file here</strong>
         <div class="upload-hint">.xlsx</div>
       </label>
       <div id="upload-status" class="hidden upload-status"></div>
@@ -674,7 +674,7 @@
     <div id="dashboard-empty" class="card">
       <div class="empty-state">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-3 3"/></svg>
-        Belum ada data. Masukkan pengeluaran di tab <strong>Input</strong> terlebih dahulu.
+        No expense data yet. Add transactions in the <strong>Input</strong> tab first.
       </div>
     </div>
 
@@ -682,17 +682,17 @@
       <!-- Toolbar -->
       <div class="card card--compact">
         <div class="toolbar">
-          <label class="toolbar-label">Bulan</label>
+          <label class="toolbar-label">Month</label>
           <select id="dash-month-select"></select>
           <span class="toolbar-spacer"></span>
-          <button class="btn-success btn-sm" id="export-btn">Unduh Excel</button>
-          <button class="btn-secondary btn-sm" id="copy-md-btn">Salin MD</button>
-          <button class="btn-danger-outline btn-sm" id="delete-month-btn" title="Hapus semua data transaksi bulan yang dipilih">Hapus Bulan</button>
+          <button class="btn-success btn-sm" id="export-btn">Export Excel</button>
+          <button class="btn-secondary btn-sm" id="copy-md-btn">Copy MD</button>
+          <button class="btn-danger-outline btn-sm" id="delete-month-btn" title="Delete all transaction data for the selected month">Delete Month</button>
         </div>
         <!-- Budget summary bar -->
         <div id="dash-budget-bar" class="hidden budget-summary">
           <div class="budget-summary-header">
-            <div class="budget-summary-label">Anggaran</div>
+            <div class="budget-summary-label">Budget</div>
             <div id="dash-budget-numbers" class="budget-summary-numbers"></div>
           </div>
           <div class="budget-progress-track">
@@ -705,13 +705,13 @@
       <!-- Charts -->
       <div class="charts-row">
         <div class="chart-box">
-          <h3>Distribusi Kategori</h3>
+          <h3>Category Distribution</h3>
           <div class="chart-wrap">
             <canvas id="chart-pie"></canvas>
           </div>
         </div>
         <div class="chart-box">
-          <h3>Nominal per Kategori</h3>
+          <h3>Spending by Category</h3>
           <div class="chart-wrap">
             <canvas id="chart-bar"></canvas>
           </div>
@@ -721,23 +721,23 @@
       <!-- Transaction table -->
       <div class="card" style="margin-top:20px;">
         <div class="card-header">
-          <div class="card-title">Detail Transaksi</div>
+          <div class="card-title">Transaction Details</div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>No</th>
-                <th>Barang / Jasa</th>
-                <th>Nominal (Rp)</th>
-                <th>Kategori</th>
-                <th>Tanggal</th>
+                <th>#</th>
+                <th>Item / Description</th>
+                <th>Amount (Rp)</th>
+                <th>Category</th>
+                <th>Date</th>
               </tr>
             </thead>
             <tbody id="table-body"></tbody>
             <tfoot>
               <tr class="total-row">
-                <td colspan="2" class="total-label">Total Pengeluaran</td>
+                <td colspan="2" class="total-label">Total Expenses</td>
                 <td class="total-amount" id="total-amount"></td>
                 <td colspan="2"></td>
               </tr>
@@ -751,39 +751,39 @@
 
 
   <!-- ═══════════════════════════════════════════════════
-       TAB 3 — TREN
+       TAB 3 — TRENDS
   ═══════════════════════════════════════════════════ -->
   <div id="tab-trend" class="tab-panel">
 
     <div id="trend-empty" class="card">
       <div class="empty-state">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-5"/></svg>
-        Butuh minimal 2 bulan data untuk menampilkan tren.
+        At least 2 months of data required to display trends.
       </div>
     </div>
 
     <div id="trend-content" class="hidden">
       <div class="chart-box" style="margin-bottom:20px;">
-        <h3>Total Pengeluaran per Bulan</h3>
+        <h3>Monthly Spending Trend</h3>
         <div class="chart-wrap chart-wrap--trend">
           <canvas id="chart-trend"></canvas>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">Ringkasan Tren Bulanan</div>
+        <div class="card-title">Monthly Trend Summary</div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Bulan</th>
-                <th>Konsumsi</th>
-                <th>Operasional</th>
-                <th>Utilitas</th>
-                <th>Transportasi</th>
-                <th>Lain-lain</th>
+                <th>Month</th>
+                <th>Food &amp; Dining</th>
+                <th>Operations</th>
+                <th>Utilities</th>
+                <th>Transportation</th>
+                <th>Other</th>
                 <th>Total</th>
-                <th>Δ vs Sebelumnya</th>
+                <th>Change vs Prev</th>
               </tr>
             </thead>
             <tbody id="trend-table-body"></tbody>
@@ -794,7 +794,7 @@
 
   </div><!-- /tab-trend -->
 
-  <div class="page-footer">Expense Analyzer &mdash; Data disimpan secara lokal di browser Anda</div>
+  <div class="page-footer">Expense Analyzer &mdash; Data is stored locally in your browser</div>
 
 </main>
 

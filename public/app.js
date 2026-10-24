@@ -44,7 +44,7 @@ function parseTransactions(input) {
     const amount = parseAmount(m[1].trim());
     if (!amount || amount <= 0) continue;
     const nameRaw = seg.slice(0, m.index).trim()
-      .replace(/^(beli|bayar|langganan|isi|pesan)\s+/i, '')
+      .replace(/^(beli|bayar|langganan|isi|pesan|buy|pay|order|subscribe to)\s+/i, '')
       .replace(/\s+/g, ' ').trim();
     if (!nameRaw) continue;
     const name = nameRaw.split(' ')
@@ -99,6 +99,26 @@ const CAT_STYLE = {
   Utilitas:     { bg:'#e6f2ec', text:'#1a5e3a', dot:'#2d8659' },
   Transportasi: { bg:'#ede8f5', text:'#4a2380', dot:'#6d42a8' },
   'Lain-lain':  { bg:'#eeeeee', text:'#4a4a4a', dot:'#888888' },
+};
+
+const CAT_DISPLAY = {
+  Konsumsi:     'Food & Dining',
+  Operasional:  'Operations',
+  Utilitas:     'Utilities',
+  Transportasi: 'Transportation',
+  'Lain-lain':  'Other',
+};
+
+const REVERSE_CAT_MAP = {
+  'Food & Dining':   'Konsumsi',
+  'Food & Beverage': 'Konsumsi',
+  'Dining':          'Konsumsi',
+  'Operations':      'Operasional',
+  'Operational':     'Operasional',
+  'Utilities':       'Utilitas',
+  'Transportation':  'Transportasi',
+  'Other':           'Lain-lain',
+  'Others':          'Lain-lain',
 };
 
 const CAT_CHART_COLORS = ['#b8860b','#4f52b2','#2d8659','#6d42a8','#888888'];
@@ -182,7 +202,7 @@ function monthLabel(key) {
   if (!key) return '';
   const [y, m] = key.split('-');
   const d = new Date(+y, +m - 1, 1);
-  return d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
 function todayMonthKey() {
@@ -203,7 +223,7 @@ const notifBanner = document.getElementById('notif-banner');
 function showNotif(type, html, autoDismiss = false) {
   const el = document.createElement('div');
   el.className = `notif notif-${type}`;
-  el.innerHTML = `<span class="notif-icon">${type==='danger'?'🚨':type==='warn'?'⚠️':'✅'}</span><span>${html}</span><span class="notif-close" title="Tutup">✕</span>`;
+  el.innerHTML = `<span class="notif-icon">${type==='danger'?'🚨':type==='warn'?'⚠️':'✅'}</span><span>${html}</span><span class="notif-close" title="Close">✕</span>`;
   el.querySelector('.notif-close').addEventListener('click', () => el.remove());
   notifBanner.appendChild(el);
   if (autoDismiss) setTimeout(() => el.remove && el.remove(), 4000);
@@ -379,7 +399,7 @@ function drawBarChart(canvasId, labels, values, colors) {
             bodyFont: { family: "'DM Sans', sans-serif", size: 13, weight: '500' },
             callbacks: {
               label: function(context) {
-                return ` Nominal: ${formatIDR(context.raw || 0)}`;
+                return ` Amount: ${formatIDR(context.raw || 0)}`;
               }
             }
           }
@@ -613,7 +633,7 @@ const budgetRemaining  = document.getElementById('budget-remaining');
 // Set default month to current month
 monthInput.value = todayMonthKey();
 
-inputEl.addEventListener('input', () => { charCount.textContent = inputEl.value.length + ' karakter'; });
+inputEl.addEventListener('input', () => { charCount.textContent = inputEl.value.length + ' characters'; });
 inputEl.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyzeBtn.click(); });
 analyzeBtn.addEventListener('click', handleAnalyze);
 
@@ -632,7 +652,7 @@ budgetTotalInput.addEventListener('input', () => {
 
 clearBtn.addEventListener('click', () => {
   inputEl.value = '';
-  charCount.textContent = '0 karakter';
+  charCount.textContent = '0 characters';
   budgetTotalInput.value = '';
   budgetRemaining.classList.add('hidden');
   hideError();
@@ -662,13 +682,13 @@ function updateRemainingDisplay(monthKey) {
   budgetRemaining.classList.remove('hidden');
   if (sisa < 0) {
     budgetRemaining.style.color = 'var(--danger)';
-    budgetRemaining.textContent = `⛔ Melebihi ${formatIDR(Math.abs(sisa))}`;
+    budgetRemaining.textContent = `⛔ Exceeded by ${formatIDR(Math.abs(sisa))}`;
   } else if (pct >= 80) {
     budgetRemaining.style.color = 'var(--warn)';
-    budgetRemaining.textContent = `⚠️ Sisa ${formatIDR(sisa)}`;
+    budgetRemaining.textContent = `⚠️ Remaining: ${formatIDR(sisa)}`;
   } else {
     budgetRemaining.style.color = 'var(--success)';
-    budgetRemaining.textContent = `✅ Sisa ${formatIDR(sisa)}`;
+    budgetRemaining.textContent = `✅ Remaining: ${formatIDR(sisa)}`;
   }
 }
 
@@ -677,11 +697,11 @@ function handleAnalyze() {
   hideError();
   clearNotifs();
   const input = inputEl.value.trim();
-  if (!input) { showInputError('Masukkan teks pengeluaran terlebih dahulu.'); return; }
+  if (!input) { showInputError('Please enter expense items first.'); return; }
 
   const monthKey = monthInput.value || todayMonthKey();
   const raw = parseTransactions(input);
-  if (!raw.length) { showInputError('Error: No transaction data detected.'); return; }
+  if (!raw.length) { showInputError('No valid transaction items detected. Format: item name followed by amount, e.g. coffee 25k'); return; }
 
   // Save budget for this month (if filled)
   const budgetAmt = readBudgetField();
@@ -698,7 +718,7 @@ function handleAnalyze() {
 
   addRows(monthKey, rows);
   inputEl.value = '';
-  charCount.textContent = '0 karakter';
+  charCount.textContent = '0 characters';
 
   // Build budget alerts (based on total budget vs total spent)
   const alerts = buildBudgetAlerts(monthKey);
@@ -707,7 +727,7 @@ function handleAnalyze() {
   updateRemainingDisplay(monthKey);
 
   // Show success notif
-  showNotif('ok', `✅ <strong>${rows.length} transaksi</strong> berhasil disimpan untuk <strong>${monthLabel(monthKey)}</strong>.`, true);
+  showNotif('ok', `✅ <strong>${rows.length} transaction${rows.length > 1 ? 's' : ''}</strong> successfully saved for <strong>${monthLabel(monthKey)}</strong>.`, true);
 
   // Show budget alerts right after — stay visible until dismissed
   alerts.forEach(a => showNotif(a.type, a.msg));
@@ -734,12 +754,12 @@ function buildBudgetAlerts(monthKey) {
   if (pct >= 1) {
     alerts.push({
       type: 'danger',
-      msg: `⛔ Total pengeluaran <strong>${formatIDR(spent)}</strong> telah melebihi anggaran <strong>${formatIDR(b)}</strong> (${Math.round(pct*100)}%)`,
+      msg: `⛔ Total spending <strong>${formatIDR(spent)}</strong> exceeded budget of <strong>${formatIDR(b)}</strong> (${Math.round(pct*100)}%)`,
     });
   } else if (pct >= 0.8) {
     alerts.push({
       type: 'warn',
-      msg: `⚠️ Anggaran hampir habis — sudah terpakai <strong>${formatIDR(spent)}</strong> dari <strong>${formatIDR(b)}</strong> (${Math.round(pct*100)}%)`,
+      msg: `⚠️ Budget nearly depleted — used <strong>${formatIDR(spent)}</strong> of <strong>${formatIDR(b)}</strong> (${Math.round(pct*100)}%)`,
     });
   }
   return alerts;
@@ -770,11 +790,11 @@ document.getElementById('delete-month-btn').addEventListener('click', () => {
   const monthKey = dashMonthSelect.value;
   if (!monthKey) return;
   const label = monthLabel(monthKey);
-  if (!confirm(`Hapus semua data transaksi untuk ${label}?\n\nTindakan ini tidak dapat dibatalkan.`)) return;
+  if (!confirm(`Delete all transaction data for ${label}?\n\nThis action cannot be undone.`)) return;
   delete store[monthKey];
   saveStore(store);
   clearNotifs();
-  showNotif('ok', `🗑 Data <strong>${label}</strong> berhasil dihapus.`, true);
+  showNotif('ok', `🗑 Data for <strong>${label}</strong> successfully deleted.`, true);
   renderDashboard();
 });
 
@@ -822,16 +842,16 @@ function renderDashboard() {
     dashBudgetBar.classList.remove('hidden');
     dashBudgetNumbers.style.color = color;
     dashBudgetNumbers.innerHTML =
-      `Terpakai <strong>${formatIDR(total)}</strong> dari <strong>${formatIDR(monthBudget)}</strong>` +
-      ` &nbsp;|&nbsp; Sisa: <strong>${formatIDR(Math.abs(sisa))}</strong>`;
+      `Spent <strong>${formatIDR(total)}</strong> of <strong>${formatIDR(monthBudget)}</strong>` +
+      ` &nbsp;|&nbsp; Remaining: <strong>${formatIDR(Math.abs(sisa))}</strong>`;
     dashBudgetProgress.style.width    = pct + '%';
     dashBudgetProgress.style.background = color;
     dashBudgetLabel.style.color = color;
     dashBudgetLabel.textContent = over
-      ? `⛔ Melebihi anggaran ${formatIDR(Math.abs(sisa))} (${Math.round(total / monthBudget * 100)}%)`
+      ? `⛔ Exceeded budget by ${formatIDR(Math.abs(sisa))} (${Math.round(total / monthBudget * 100)}%)`
       : pct >= 80
-        ? `⚠️ Hampir habis — ${Math.round(pct)}% terpakai`
-        : `✅ Aman — ${Math.round(pct)}% terpakai`;
+        ? `⚠️ Nearly depleted — ${Math.round(pct)}% used`
+        : `✅ On track — ${Math.round(pct)}% used`;
   } else {
     dashBudgetBar.classList.add('hidden');
   }
@@ -845,8 +865,8 @@ function renderDashboard() {
   const chartValues  = chartLabels.map(c => catTotals[c] || 0);
   const chartColors  = chartLabels.map(c => CAT_STYLE[c].dot);
   setTimeout(() => {
-    drawPieChart('chart-pie', chartLabels, chartValues, chartColors);
-    drawBarChart('chart-bar', CAT_KEYS, CAT_KEYS.map(c => catTotals[c] || 0), CAT_CHART_COLORS);
+    drawPieChart('chart-pie', chartLabels.map(c => CAT_DISPLAY[c] || c), chartValues, chartColors);
+    drawBarChart('chart-bar', CAT_KEYS.map(c => CAT_DISPLAY[c] || c), CAT_KEYS.map(c => catTotals[c] || 0), CAT_CHART_COLORS);
   }, 50);
 
   // Table
@@ -859,7 +879,7 @@ function renderDashboard() {
       <td class="td-name">${escHtml(r.name)}</td>
       <td class="td-amount">${escHtml(formatIDR(r.amount))}</td>
       <td><span class="badge" style="background:${cs.bg};color:${cs.text};">
-        <span class="dot" style="background:${cs.dot};"></span>${r.category}</span></td>
+        <span class="dot" style="background:${cs.dot};"></span>${CAT_DISPLAY[r.category] || r.category}</span></td>
       <td class="td-date">${escHtml(r.date || '')}</td>`;
     tableBody.appendChild(tr);
   });
@@ -870,16 +890,16 @@ function renderDashboard() {
 }
 
 function buildMarkdown(rows, total) {
-  const hdr = '| No | Barang/Jasa | Nominal (Rp) | Kategori |\n|----|-------------|--------------|----------|';
-  const body = rows.map((r,i) => `| ${i+1}  | ${r.name} | ${formatIDR(r.amount)} | ${r.category} |`);
-  return [hdr, ...body, `|    | **TOTAL PENGELUARAN** | **${formatIDR(total)}** |  |`].join('\n');
+  const hdr = '| # | Item / Description | Amount (Rp) | Category |\n|---|-------------------|-------------|----------|';
+  const body = rows.map((r,i) => `| ${i+1}  | ${r.name} | ${formatIDR(r.amount)} | ${CAT_DISPLAY[r.category] || r.category} |`);
+  return [hdr, ...body, `|    | **TOTAL EXPENSES** | **${formatIDR(total)}** |  |`].join('\n');
 }
 
 function copyMarkdown() {
   if (!lastMarkdown) return;
   navigator.clipboard.writeText(lastMarkdown).then(() => {
-    copyMdBtn.textContent = '✓ Tersalin!';
-    setTimeout(() => { copyMdBtn.textContent = '⎘ Salin Markdown'; }, 2000);
+    copyMdBtn.textContent = '✓ Copied!';
+    setTimeout(() => { copyMdBtn.textContent = 'Copy MD'; }, 2000);
   });
 }
 
@@ -915,7 +935,7 @@ function renderTrend() {
   // Line chart
   const shortLabels = months.map(m => {
     const [y, mo] = m.split('-');
-    return new Date(+y, +mo-1, 1).toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+    return new Date(+y, +mo-1, 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
   });
   setTimeout(() => {
     drawLineChart('chart-trend', shortLabels, monthTotals.map(m => m.total));
@@ -949,71 +969,71 @@ function renderTrend() {
 
 function exportExcel() {
   if (typeof XLSX === 'undefined') {
-    showNotif('danger', 'Library XLSX belum termuat. Pastikan terhubung ke internet.', true);
+    showNotif('danger', 'XLSX library not loaded. Please ensure internet connectivity.', true);
     return;
   }
 
   const monthKey = dashMonthSelect.value;
   const rows = getMonthRows(monthKey);
-  if (!rows.length) { showNotif('warn', 'Tidak ada data untuk diekspor.', true); return; }
+  if (!rows.length) { showNotif('warn', 'No data available to export.', true); return; }
 
   const wb = XLSX.utils.book_new();
 
   // ── Sheet 1: Transactions ──
   const txData = [
-    ['No', 'Barang / Jasa', 'Nominal (Rp)', 'Kategori', 'Bulan'],
-    ...rows.map((r, i) => [i + 1, r.name, r.amount, r.category, r.date]),
+    ['#', 'Item / Description', 'Amount (Rp)', 'Category', 'Month'],
+    ...rows.map((r, i) => [i + 1, r.name, r.amount, CAT_DISPLAY[r.category] || r.category, r.date]),
     [],
-    ['', 'TOTAL PENGELUARAN', rows.reduce((s, r) => s + r.amount, 0), '', ''],
+    ['', 'TOTAL EXPENSES', rows.reduce((s, r) => s + r.amount, 0), '', ''],
   ];
   const ws1 = XLSX.utils.aoa_to_sheet(txData);
-  ws1['!cols'] = [{ wch: 4 }, { wch: 30 }, { wch: 16 }, { wch: 14 }, { wch: 10 }];
-  XLSX.utils.book_append_sheet(wb, ws1, 'Transaksi');
+  ws1['!cols'] = [{ wch: 4 }, { wch: 30 }, { wch: 16 }, { wch: 16 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Transactions');
 
   // ── Sheet 2: Summary by category ──
   const catTotals = {};
   rows.forEach(r => { catTotals[r.category] = (catTotals[r.category] || 0) + r.amount; });
   const total = rows.reduce((s, r) => s + r.amount, 0);
   const sumData = [
-    ['Kategori', 'Total (Rp)', 'Persentase (%)'],
+    ['Category', 'Total (Rp)', 'Percentage (%)'],
     ...CAT_KEYS.filter(c => catTotals[c]).map(c => [
-      c, catTotals[c], +((catTotals[c] / total * 100).toFixed(2))
+      CAT_DISPLAY[c] || c, catTotals[c], +((catTotals[c] / total * 100).toFixed(2))
     ]),
     [],
     ['TOTAL', total, 100],
   ];
   const ws2 = XLSX.utils.aoa_to_sheet(sumData);
-  ws2['!cols'] = [{ wch: 16 }, { wch: 16 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
+  ws2['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
 
   // ── Sheet 3: All months trend ──
   const allM = allMonths();
-  const trendHdr = ['Bulan', ...CAT_KEYS, 'Total'];
+  const trendHdr = ['Month', ...CAT_KEYS.map(c => CAT_DISPLAY[c] || c), 'Total'];
   const trendRows = allM.map(m => {
     const ct = {};
     getMonthRows(m).forEach(r => { ct[r.category] = (ct[r.category] || 0) + r.amount; });
     return [monthLabel(m), ...CAT_KEYS.map(c => ct[c] || 0), getMonthRows(m).reduce((s,r)=>s+r.amount,0)];
   });
   const ws3 = XLSX.utils.aoa_to_sheet([trendHdr, ...trendRows]);
-  ws3['!cols'] = [{ wch: 20 }, ...Array(6).fill({ wch: 14 })];
-  XLSX.utils.book_append_sheet(wb, ws3, 'Tren Bulanan');
+  ws3['!cols'] = [{ wch: 20 }, ...Array(6).fill({ wch: 16 })];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Monthly Trends');
 
-  // ── Sheet 4: Budget per bulan ──
+  // ── Sheet 4: Budget per month ──
   const allBudgetMonths = [...new Set([...allMonths(), ...Object.keys(budget)])].sort();
   const budgetSheetData = [
-    ['Bulan', 'Anggaran (Rp)', 'Realisasi (Rp)', 'Sisa (Rp)', 'Status (%)'],
+    ['Month', 'Budget (Rp)', 'Actual Spent (Rp)', 'Remaining (Rp)', 'Status (%)'],
     ...allBudgetMonths.map(m => {
       const b     = getBudgetForMonth(m);
       const spent = getMonthRows(m).reduce((s, r) => s + r.amount, 0);
       const sisa  = b - spent;
       const pct   = b > 0 ? Math.round(spent / b * 100) : 0;
-      const status = b <= 0 ? 'Tidak diset' : spent > b ? 'Melebihi' : pct >= 80 ? 'Hampir habis' : 'Aman';
+      const status = b <= 0 ? 'Not set' : spent > b ? 'Exceeded' : pct >= 80 ? 'Nearly depleted' : 'On track';
       return [monthLabel(m), b, spent, sisa, status + (b > 0 ? ' (' + pct + '%)' : '')];
     }),
   ];
   const ws4 = XLSX.utils.aoa_to_sheet(budgetSheetData);
-  ws4['!cols'] = [{ wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
-  XLSX.utils.book_append_sheet(wb, ws4, 'Anggaran');
+  ws4['!cols'] = [{ wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Budget');
 
   // ── Sheet 5: Metadata (for re-import) ──
   const meta = [
@@ -1027,7 +1047,7 @@ function exportExcel() {
 
   const filename = `expense-analyzer-${monthKey}.xlsx`;
   XLSX.writeFile(wb, filename);
-  showNotif('ok', `⬇ File <strong>${filename}</strong> berhasil diunduh.`, true);
+  showNotif('ok', `⬇ File <strong>${filename}</strong> downloaded successfully.`, true);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1037,7 +1057,7 @@ function exportExcel() {
 function handleExcelUpload(file) {
   if (!file) return;
   if (typeof XLSX === 'undefined') {
-    showNotif('danger', 'Library XLSX belum termuat. Pastikan terhubung ke internet.', true);
+    showNotif('danger', 'XLSX library not loaded. Please ensure internet connectivity.', true);
     return;
   }
   const reader = new FileReader();
@@ -1083,31 +1103,34 @@ function handleExcelUpload(file) {
 
           const txCount = Object.values(merged).reduce((s, a) => s + a.length, 0);
           const budgetMonths = Object.keys(importedBudget).length;
-          setUploadStatus(`✅ Berhasil diimpor: ${txCount} transaksi, ${budgetMonths} anggaran bulan.`);
-          showNotif('ok', `📥 Data dari <strong>${file.name}</strong> berhasil digabungkan (termasuk anggaran).`, true);
+          setUploadStatus(`✅ Successfully imported: ${txCount} transaction(s), ${budgetMonths} month budget(s).`);
+          showNotif('ok', `📥 Data from <strong>${file.name}</strong> successfully merged (including budgets).`, true);
           return;
         }
       }
 
-      // Fallback: parse Transaksi sheet manually
-      if (!wb.SheetNames.includes('Transaksi')) {
-        showNotif('danger', 'Format file tidak dikenali. Gunakan file yang diunduh dari Expense Analyzer.', true);
+      // Fallback: parse Transactions / Transaksi sheet manually
+      const txSheetName = wb.SheetNames.find(s => ['Transactions', 'Transaksi'].includes(s));
+      if (!txSheetName) {
+        showNotif('danger', 'Unrecognized file format. Please upload an Excel file exported from Expense Analyzer.', true);
         return;
       }
-      const ws = wb.Sheets['Transaksi'];
+      const ws = wb.Sheets[txSheetName];
       const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
       let imported = 0;
       for (let i = 1; i < rawRows.length; i++) {
         const [no, name, amount, category, date] = rawRows[i];
         if (!name || !amount || String(name).toUpperCase().includes('TOTAL')) continue;
         const monthKey = date || todayMonthKey();
-        addRows(monthKey, [{ name: String(name), amount: +amount, category: String(category) || 'Lain-lain', date: monthKey }]);
+        const rawCat = String(category).trim();
+        const normalizedCat = REVERSE_CAT_MAP[rawCat] || (CAT_KEYS.includes(rawCat) ? rawCat : 'Lain-lain');
+        addRows(monthKey, [{ name: String(name), amount: +amount, category: normalizedCat, date: monthKey }]);
         imported++;
       }
-      setUploadStatus(`✅ Berhasil mengimpor ${imported} transaksi.`);
-      showNotif('ok', `📥 ${imported} transaksi dari <strong>${file.name}</strong> berhasil diimpor.`, true);
+      setUploadStatus(`✅ Successfully imported ${imported} transaction(s).`);
+      showNotif('ok', `📥 ${imported} transaction(s) from <strong>${file.name}</strong> successfully imported.`, true);
     } catch (err) {
-      showNotif('danger', 'Gagal membaca file: ' + err.message, true);
+      showNotif('danger', 'Failed to read file: ' + err.message, true);
     }
   };
   reader.readAsArrayBuffer(file);
