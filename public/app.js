@@ -94,14 +94,14 @@ function categorize(name) {
 // ═══════════════════════════════════════════════════════════════════
 
 const CAT_STYLE = {
-  Konsumsi:     { bg:'#fef3c7', text:'#92400e', dot:'#f59e0b' },
-  Operasional:  { bg:'#dbeafe', text:'#1e40af', dot:'#3b82f6' },
-  Utilitas:     { bg:'#d1fae5', text:'#065f46', dot:'#10b981' },
-  Transportasi: { bg:'#ede9fe', text:'#4c1d95', dot:'#7c3aed' },
-  'Lain-lain':  { bg:'#f3f4f6', text:'#374151', dot:'#6b7280' },
+  Konsumsi:     { bg:'#f5f0e6', text:'#6b5317', dot:'#b8860b' },
+  Operasional:  { bg:'#eaecf3', text:'#2d3282', dot:'#4f52b2' },
+  Utilitas:     { bg:'#e6f2ec', text:'#1a5e3a', dot:'#2d8659' },
+  Transportasi: { bg:'#ede8f5', text:'#4a2380', dot:'#6d42a8' },
+  'Lain-lain':  { bg:'#eeeeee', text:'#4a4a4a', dot:'#888888' },
 };
 
-const CAT_CHART_COLORS = ['#f59e0b','#3b82f6','#10b981','#7c3aed','#6b7280'];
+const CAT_CHART_COLORS = ['#b8860b','#4f52b2','#2d8659','#6d42a8','#888888'];
 
 // ═══════════════════════════════════════════════════════════════════
 // 4. DATA STORE  (localStorage)
@@ -214,25 +214,111 @@ function clearNotifs() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 8. CANVAS CHARTS (pure Canvas API — no external lib)
+// 8. INTERACTIVE CHARTS (Powered by Chart.js with Canvas Fallback)
 // ═══════════════════════════════════════════════════════════════════
+
+const chartInstances = {};
+
+function destroyChart(canvasId) {
+  if (chartInstances[canvasId]) {
+    chartInstances[canvasId].destroy();
+    delete chartInstances[canvasId];
+  }
+}
 
 function drawPieChart(canvasId, labels, values, colors) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || 300;
-  canvas.width = W;
-  canvas.height = canvas.getAttribute('height') || 220;
-  const H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
+  destroyChart(canvasId);
 
   const total = values.reduce((a, b) => a + b, 0);
   if (!total) return;
 
+  if (typeof Chart !== 'undefined') {
+    const isMobile = window.innerWidth < 520;
+    chartInstances[canvasId] = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          hoverBorderWidth: 2,
+          hoverOffset: 7,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        animation: {
+          animateScale: true,
+          animateRotate: true,
+          duration: 550,
+        },
+        plugins: {
+          legend: {
+            position: isMobile ? 'bottom' : 'right',
+            labels: {
+              boxWidth: 10,
+              boxHeight: 10,
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: isMobile ? 10 : 14,
+              font: { family: "'DM Sans', sans-serif", size: 13, weight: '500' },
+              color: '#1a1a1a',
+              generateLabels: function(chart) {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map((label, i) => {
+                    const val = data.datasets[0].data[i] || 0;
+                    const pct = total ? ((val / total) * 100).toFixed(1) : '0';
+                    return {
+                      text: `${label} (${pct}%)`,
+                      fillStyle: colors[i % colors.length],
+                      strokeStyle: colors[i % colors.length],
+                      lineWidth: 0,
+                      hidden: isNaN(data.datasets[0].data[i]) || chart.getDatasetMeta(0).data[i].hidden,
+                      index: i
+                    };
+                  });
+                }
+                return [];
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1a1a1a',
+            padding: 12,
+            cornerRadius: 8,
+            titleFont: { family: "'DM Sans', sans-serif", size: 13, weight: '700' },
+            bodyFont: { family: "'DM Sans', sans-serif", size: 13, weight: '500' },
+            boxPadding: 6,
+            usePointStyle: true,
+            callbacks: {
+              label: function(context) {
+                const val = context.raw || 0;
+                const pct = total ? ((val / total) * 100).toFixed(1) : '0';
+                return ` ${formatIDR(val)} (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+    return;
+  }
+
+  // Fallback: raw Canvas API
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 300, H = canvas.offsetHeight || 220;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
   const cx = W * 0.38, cy = H / 2, r = Math.min(cx, cy) - 16;
   let startAngle = -Math.PI / 2;
-
   values.forEach((v, i) => {
     const slice = (v / total) * 2 * Math.PI;
     ctx.beginPath();
@@ -246,76 +332,116 @@ function drawPieChart(canvasId, labels, values, colors) {
     ctx.stroke();
     startAngle += slice;
   });
-
-  // Legend
-  const legX = W * 0.72, legStartY = cy - (labels.length * 20) / 2;
-  ctx.font = '12px system-ui, sans-serif';
+  const legX = W * 0.70, legStartY = cy - (labels.length * 24) / 2;
+  ctx.font = '13px "DM Sans", sans-serif';
   labels.forEach((lbl, i) => {
-    const ly = legStartY + i * 22;
+    const ly = legStartY + i * 26;
     ctx.fillStyle = colors[i % colors.length];
-    ctx.fillRect(legX, ly - 9, 12, 12);
-    ctx.fillStyle = '#1f2328';
-    ctx.fillText(lbl, legX + 16, ly);
-    ctx.fillStyle = '#57606a';
-    ctx.fillText(((values[i] / total) * 100).toFixed(1) + '%', legX + 16, ly + 13);
+    ctx.fillRect(legX, ly - 10, 12, 12);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillText(lbl, legX + 18, ly);
+    ctx.fillStyle = '#6b6b6b';
+    ctx.fillText(((values[i] / total) * 100).toFixed(1) + '%', legX + 18, ly + 15);
   });
 }
 
 function drawBarChart(canvasId, labels, values, colors) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || 300;
-  canvas.width = W;
-  canvas.height = canvas.getAttribute('height') || 220;
-  const H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
+  destroyChart(canvasId);
 
   if (!values.some(v => v > 0)) return;
 
+  if (typeof Chart !== 'undefined') {
+    chartInstances[canvasId] = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderRadius: 8,
+          borderSkipped: false,
+          maxBarThickness: 42,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 500 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1a1a',
+            padding: 12,
+            cornerRadius: 8,
+            titleFont: { family: "'DM Sans', sans-serif", size: 13, weight: '700' },
+            bodyFont: { family: "'DM Sans', sans-serif", size: 13, weight: '500' },
+            callbacks: {
+              label: function(context) {
+                return ` Nominal: ${formatIDR(context.raw || 0)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              font: { family: "'DM Sans', sans-serif", size: 12.5, weight: '500' },
+              color: '#5e6470',
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#f0f2f5' },
+            border: { display: false },
+            ticks: {
+              font: { family: "'DM Sans', sans-serif", size: 12, weight: '500' },
+              color: '#8e95a0',
+              callback: function(value) {
+                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'jt';
+                if (value >= 1000) return (value / 1000).toFixed(0) + 'rb';
+                return value;
+              }
+            }
+          }
+        }
+      }
+    });
+    return;
+  }
+
+  // Fallback: raw Canvas API
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 300, H = canvas.offsetHeight || 220;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
   const pad = { top: 20, right: 16, bottom: 50, left: 16 };
-  const chartW = W - pad.left - pad.right;
-  const chartH = H - pad.top - pad.bottom;
+  const chartW = W - pad.left - pad.right, chartH = H - pad.top - pad.bottom;
   const maxVal = Math.max(...values);
-
   const barW = (chartW / labels.length) * 0.55;
-  const gap   = chartW / labels.length;
-
-  ctx.font = '11px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-
+  const gap = chartW / labels.length;
   labels.forEach((lbl, i) => {
     if (!values[i]) return;
     const barH = (values[i] / maxVal) * chartH;
     const x = pad.left + gap * i + (gap - barW) / 2;
     const y = pad.top + chartH - barH;
-
-    // Bar
     ctx.fillStyle = colors[i % colors.length];
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [4, 4, 0, 0])
-                  : ctx.rect(x, y, barW, barH);
+    ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [6, 6, 0, 0]) : ctx.rect(x, y, barW, barH);
     ctx.fill();
-
-    // Value label above bar
-    ctx.fillStyle = '#1f2328';
-    ctx.font = '10px system-ui, sans-serif';
-    const shortVal = values[i] >= 1000000
-      ? (values[i]/1000000).toFixed(1)+'jt'
-      : values[i] >= 1000
-        ? (values[i]/1000).toFixed(0)+'rb'
-        : values[i];
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = '12px "DM Sans", sans-serif';
+    ctx.textAlign = 'center';
+    const shortVal = values[i] >= 1000000 ? (values[i]/1000000).toFixed(1)+'jt' : values[i] >= 1000 ? (values[i]/1000).toFixed(0)+'rb' : values[i];
     ctx.fillText(shortVal, x + barW / 2, y - 5);
-
-    // Category label below
-    ctx.fillStyle = '#57606a';
-    ctx.font = '11px system-ui, sans-serif';
-    ctx.fillText(lbl.length > 8 ? lbl.slice(0, 7)+'…' : lbl, x + barW / 2, H - pad.bottom + 16);
+    ctx.fillStyle = '#5e6470';
+    ctx.font = '12.5px "DM Sans", sans-serif';
+    ctx.fillText(lbl.length > 8 ? lbl.slice(0, 7)+'…' : lbl, x + barW / 2, H - pad.bottom + 18);
   });
-
-  // Axis line
   ctx.beginPath();
-  ctx.strokeStyle = '#e5e7eb';
+  ctx.strokeStyle = '#e0e0e0';
   ctx.lineWidth = 1;
   ctx.moveTo(pad.left, pad.top + chartH);
   ctx.lineTo(W - pad.right, pad.top + chartH);
@@ -325,78 +451,129 @@ function drawBarChart(canvasId, labels, values, colors) {
 function drawLineChart(canvasId, labels, values) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || 600;
-  canvas.width = W;
-  canvas.height = canvas.getAttribute('height') || 200;
-  const H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
+  destroyChart(canvasId);
+
   if (labels.length < 2) return;
 
-  const pad = { top: 28, right: 24, bottom: 44, left: 24 };
-  const chartW = W - pad.left - pad.right;
-  const chartH = H - pad.top - pad.bottom;
-  const maxVal = Math.max(...values) * 1.1 || 1;
+  if (typeof Chart !== 'undefined') {
+    chartInstances[canvasId] = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          borderColor: '#e8380d',
+          backgroundColor: 'rgba(232, 56, 13, 0.08)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointBackgroundColor: '#e8380d',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointHoverBackgroundColor: '#e8380d',
+          pointHoverBorderColor: '#ffffff',
+          pointHoverBorderWidth: 3,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 600 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1a1a',
+            padding: 12,
+            cornerRadius: 8,
+            titleFont: { family: "'DM Sans', sans-serif", size: 13, weight: '700' },
+            bodyFont: { family: "'DM Sans', sans-serif", size: 13, weight: '500' },
+            callbacks: {
+              label: function(context) {
+                return ` Total: ${formatIDR(context.raw || 0)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              font: { family: "'DM Sans', sans-serif", size: 12.5, weight: '500' },
+              color: '#5e6470',
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#f0f2f5' },
+            border: { display: false },
+            ticks: {
+              font: { family: "'DM Sans', sans-serif", size: 12, weight: '500' },
+              color: '#8e95a0',
+              callback: function(value) {
+                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'jt';
+                if (value >= 1000) return (value / 1000).toFixed(0) + 'rb';
+                return value;
+              }
+            }
+          }
+        }
+      }
+    });
+    return;
+  }
 
+  // Fallback: raw Canvas API
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 600, H = canvas.offsetHeight || 200;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+  const pad = { top: 28, right: 24, bottom: 44, left: 24 };
+  const chartW = W - pad.left - pad.right, chartH = H - pad.top - pad.bottom;
+  const maxVal = Math.max(...values) * 1.1 || 1;
   const pts = labels.map((_, i) => ({
     x: pad.left + (i / (labels.length - 1)) * chartW,
     y: pad.top + chartH - (values[i] / maxVal) * chartH,
   }));
-
-  // Grid lines
   ctx.strokeStyle = '#f0f0f0';
   ctx.lineWidth = 1;
   for (let g = 0; g <= 4; g++) {
     const gy = pad.top + (g / 4) * chartH;
     ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(W - pad.right, gy); ctx.stroke();
   }
-
-  // Filled area
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pad.top + chartH);
   pts.forEach(p => ctx.lineTo(p.x, p.y));
   ctx.lineTo(pts[pts.length - 1].x, pad.top + chartH);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(59,130,212,.12)';
+  ctx.fillStyle = 'rgba(232,56,13,.08)';
   ctx.fill();
-
-  // Line
   ctx.beginPath();
-  ctx.strokeStyle = '#3b82d4';
+  ctx.strokeStyle = '#e8380d';
   ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
   pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
   ctx.stroke();
-
-  // Dots + labels
-  ctx.font = '10.5px system-ui, sans-serif';
+  ctx.font = '12px "DM Sans", sans-serif';
   ctx.textAlign = 'center';
   pts.forEach((p, i) => {
     ctx.beginPath();
     ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#3b82d4';
+    ctx.fillStyle = '#e8380d';
     ctx.fill();
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
     ctx.stroke();
-
-    // Value above dot
-    ctx.fillStyle = '#1f2328';
-    const shortVal = values[i] >= 1000000
-      ? (values[i]/1000000).toFixed(1)+'jt'
-      : values[i] >= 1000
-        ? (values[i]/1000).toFixed(0)+'rb'
-        : values[i];
+    ctx.fillStyle = '#1a1a1a';
+    const shortVal = values[i] >= 1000000 ? (values[i]/1000000).toFixed(1)+'jt' : values[i] >= 1000 ? (values[i]/1000).toFixed(0)+'rb' : values[i];
     ctx.fillText(shortVal, p.x, p.y - 10);
-
-    // Month label below
-    ctx.fillStyle = '#57606a';
-    ctx.fillText(labels[i], p.x, H - pad.bottom + 16);
+    ctx.fillStyle = '#5e6470';
+    ctx.font = '12.5px "DM Sans", sans-serif';
+    ctx.fillText(labels[i], p.x, H - pad.bottom + 18);
   });
-
-  // Axis
   ctx.beginPath();
-  ctx.strokeStyle = '#e5e7eb';
+  ctx.strokeStyle = '#e0e0e0';
   ctx.lineWidth = 1;
   ctx.moveTo(pad.left, pad.top + chartH);
   ctx.lineTo(W - pad.right, pad.top + chartH);
@@ -640,7 +817,7 @@ function renderDashboard() {
     const pct   = Math.min((total / monthBudget) * 100, 100);
     const sisa  = monthBudget - total;
     const over  = total > monthBudget;
-    const color = over ? '#dc2626' : pct >= 80 ? '#d97706' : '#059669';
+    const color = over ? '#e8380d' : pct >= 80 ? '#bf8700' : '#1a7f37';
 
     dashBudgetBar.classList.remove('hidden');
     dashBudgetNumbers.style.color = color;
@@ -753,7 +930,7 @@ function renderTrend() {
     const deltaStr = delta === null ? '—'
       : delta === 0 ? '±0'
       : (delta > 0 ? '▲ +' : '▼ ') + formatIDR(Math.abs(delta));
-    const deltaColor = delta === null ? '' : delta > 0 ? '#dc2626' : delta < 0 ? '#059669' : '';
+    const deltaColor = delta === null ? '' : delta > 0 ? '#e8380d' : delta < 0 ? '#1a7f37' : '';
 
     const tr = document.createElement('tr');
     tr.className = 'trend-month-row';
@@ -949,7 +1126,7 @@ document.getElementById('upload-excel-drop').addEventListener('change',  e => ha
 
 // Drag & drop onto upload zone label
 const uploadLabel = document.querySelector('label[for="upload-excel-drop"]');
-uploadLabel.addEventListener('dragover', e => { e.preventDefault(); uploadLabel.style.borderColor = '#3b82d4'; });
+uploadLabel.addEventListener('dragover', e => { e.preventDefault(); uploadLabel.style.borderColor = '#e8380d'; });
 uploadLabel.addEventListener('dragleave', () => { uploadLabel.style.borderColor = ''; });
 uploadLabel.addEventListener('drop', e => {
   e.preventDefault();
